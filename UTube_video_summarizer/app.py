@@ -1,7 +1,7 @@
 from youtube_transcript_api import YouTubeTranscriptApi
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
-from langchain_openai import OpenAI
+from langchain_openai import ChatOpenAI, OpenAI
 from langchain_core.prompts import PromptTemplate
 from langchain.chains.summarize import load_summarize_chain
 from langchain_community.document_loaders import PyPDFLoader
@@ -63,6 +63,64 @@ def text2doc(video_id):
         print("An error occurred:", e)
         return None
 
+# Define the function to generate LinkedIn post from summary
+def generate_linkedin_post(summary: str) -> str:
+    # Format the prompt with the summary
+    formatted_prompt = linkedin_post_prompt.format(summary=summary)
+    
+    # Use ChatOpenAI model to generate the post
+    linkedin_post = chat_openai(formatted_prompt)
+    
+    return linkedin_post
+
+
+linkedin_post_prompt = PromptTemplate(
+    input_variables=["summary"],
+    template="""
+    Based on the following summary, create a LinkedIn post that is professional, engaging, and concise. The post should highlight the key points and attract attention from professionals in the field. Keep the tone friendly yet formal, and encourage engagement through a call to action.
+    
+    Summary:
+    {summary}
+
+    LinkedIn Post:
+    """
+)
+
+
+# Define the prompt template
+summary_prompt = PromptTemplate(
+    input_variables=["input_text"],
+    template="""
+    You are an AI assistant tasked with summarizing the input text. Your job is to read the entire text carefully and then generate a brief, clear, and concise summary that captures the main points. Your summary should be under 200 words and include all the essential information.
+
+    Input Text:
+    {input_text}
+
+    Your Summary:
+    """
+)
+
+# Example usage of the prompt template
+input_text = "The quick brown fox jumps over the lazy dog. It is a sunny day, and the fox is excited to explore the forest. The dog, however, is uninterested in the fox's antics and enjoys lounging in the sun. After some time, the fox notices a butterfly fluttering by and decides to chase it."
+
+# Fill the prompt template with the input text
+formatted_prompt = summary_prompt.format(input_text=input_text)
+
+# Create a ChatOpenAI instance with parameters
+chat_openai = ChatOpenAI(
+    model="gpt-3.5-turbo",      # Model version
+    temperature=0.7,            # Controls randomness (0.0 to 1.0)
+    max_tokens=300,             # Maximum number of tokens to generate
+    top_p=1.0,                  # Controls nucleus sampling (0.0 to 1.0)
+    frequency_penalty=0.0,      # Penalizes repetition (range: -2.0 to 2.0)
+    presence_penalty=0.0,       # Penalizes new topics (range: -2.0 to 2.0)
+    stop=["\n"],                # Stops generation when this token is encountered
+    api_key=api_key,            # Your OpenAI API key (ensure it's secure)
+)
+
+
+
+
 # Example usage
 if __name__ == "__main__":
     youtube_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"  # Example YouTube URL
@@ -74,4 +132,19 @@ if __name__ == "__main__":
         print(f"Total Chunks: {len(chunks)}")
         for i, chunk in enumerate(chunks[:3]):  # Print first 3 chunks for example
             print(f"Chunk {i+1}: {chunk.page_content[:300]}...")  # Preview first 300 chars of each chunk
+
+    # Load the SummarizeChain with Map-Reduce strategy
+    summarize_chain = load_summarize_chain(
+        llm=chat_openai,
+        chain_type="map_reduce",  # Using map-reduce strategy for summarization
+        verbose=True,
+    )
+
+    summary = summarize_chain.run(chunks)
+    
+
+    linkedin_post = generate_linkedin_post(summary)
+    print(linkedin_post)
+
+
 
