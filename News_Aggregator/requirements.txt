@@ -1,0 +1,7 @@
+langchain
+langchain-community
+langchain-openai
+tiktoken
+streamlit
+emoji
+google-search-results
