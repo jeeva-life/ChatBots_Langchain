@@ -9,3 +9,4 @@ altair
 langchain-openai
 html2text
 streamlit_chat
+langgraph
